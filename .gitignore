@@ -1,0 +1,3 @@
+node_modules/
+cypress/fixtures/posts.json
+cypress/fixtures/comments.json
