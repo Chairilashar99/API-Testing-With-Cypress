@@ -90,7 +90,6 @@ describe("Auth module", () => {
 				body: userData,
 				failOnStatusCode: false,
 			}).then((response) => {
-				cy.log(response);
 				expect(response.status).to.eq(500);
 				expect(response.body.success).to.be.false;
 				expect(response.body.message).to.eq("Email already exists");
@@ -98,7 +97,7 @@ describe("Auth module", () => {
 		});
 	});
 
-	describe.only("Login", () => {
+	describe("Login", () => {
 		/**
 		 * 1. Unauthorized on failed
 		 * 2. return access token on success
@@ -110,6 +109,8 @@ describe("Auth module", () => {
 				failOnStatusCode: false,
 			}).then((response) => {
 				cy.unauthorized(response);
+				// expect(response.status).to.eq(401)
+				// expect(response.body.message).to.eq('Unauthorized')
 			});
 
 			cy.request({
@@ -122,6 +123,62 @@ describe("Auth module", () => {
 				failOnStatusCode: false,
 			}).then((response) => {
 				cy.unauthorized(response);
+				// expect(response.status).to.eq(401)
+				// expect(response.body.message).to.eq('Unauthorized')
+			});
+		});
+
+		it("should return access token on success", () => {
+			cy.request({
+				method: "POST",
+				url: "/auth/login",
+				body: {
+					email: userData.email,
+					password: userData.password,
+				},
+			}).then((response) => {
+				expect(response.body.success).to.be.true;
+				expect(response.body.message).to.eq("Login success");
+				expect(response.body.data.access_token).not.to.be.undefined;
+			});
+		});
+	});
+
+	describe("Me", () => {
+		/**
+		 * 1. error unauthorized
+		 * 2. return correct current data
+		 */
+
+		before("do login", () => {
+			cy.login();
+		});
+
+		it("should return unauthorized when send no token", () => {
+			cy.checkUnauthorized("GET", "/auth/me");
+			// cy.request({
+			// 	method: "GET",
+			// 	url: "/auth/me",
+			// 	failOnStatusCode: false,
+			// }).then((response) => {
+			// 	cy.unauthorized(response);
+			// });
+		});
+
+		it("should return correct current data", () => {
+			cy.request({
+				method: "GET",
+				url: "/auth/me",
+				headers: {
+					authorization: `Bearer ${Cypress.env("token")}`,
+				},
+				failOnStatusCode: false,
+			}).then((response) => {
+				const { id, name, email } = response.body.data;
+				expect(response.status).to.eq(200);
+				expect(id).not.to.be.undefined;
+				expect(name).to.eq(userData.name);
+				expect(email).to.eq(userData.email);
 			});
 		});
 	});

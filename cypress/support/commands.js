@@ -24,6 +24,9 @@
 // -- This will overwrite an existing command --
 // Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
 
+/**
+ * Auth
+ */
 Cypress.Commands.add("resetUsers", () => {
 	cy.request("DELETE", "/auth/reset");
 });
@@ -39,4 +42,44 @@ Cypress.Commands.add("badRequest", (response, messages = []) => {
 Cypress.Commands.add("unauthorized", (response) => {
 	expect(response.status).to.eq(401);
 	expect(response.body.message).to.eq("Unauthorized");
+});
+
+Cypress.Commands.add("checkUnauthorized", (method, url) => {
+	cy.request({
+		method,
+		url,
+		headers: {
+			authorization: null,
+		},
+		failOnStatusCode: false,
+	}).then((response) => {
+		cy.unauthorized(response);
+	});
+});
+
+Cypress.Commands.add("login", () => {
+	const userData = {
+		name: "John Doe",
+		email: "john3@nest.test",
+		password: "Secret_123",
+	};
+
+	cy.resetUsers();
+
+	cy.request({
+		method: "POST",
+		url: "/auth/register",
+		body: userData,
+	});
+
+	cy.request({
+		method: "POST",
+		url: "/auth/login",
+		body: {
+			email: userData.email,
+			password: userData.password,
+		},
+	}).then((response) => {
+		Cypress.env("token", response.body.data.access_token);
+	});
 });
