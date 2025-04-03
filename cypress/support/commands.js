@@ -83,3 +83,17 @@ Cypress.Commands.add("login", () => {
 		Cypress.env("token", response.body.data.access_token);
 	});
 });
+
+Cypress.Commands.add("generatePostsData", (count) => {
+	const { faker, fakerKO } = require("@faker-js/faker");
+
+	cy.writeFile(
+		"cypress/fixtures/posts.json",
+		Cypress._.times(count, () => {
+			return {
+				title: faker.lorem.words(3),
+				content: faker.lorem.paragraph(),
+			};
+		})
+	);
+});
