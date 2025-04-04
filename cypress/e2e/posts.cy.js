@@ -1,5 +1,6 @@
 describe("Post module", () => {
 	const dataCount = 15;
+	const randomId = Cypress._.random(16, 50);
 	before("login", () => {
 		cy.login();
 	});
@@ -56,6 +57,116 @@ describe("Post module", () => {
 					expect(content).to.eq(postData[0].content);
 					expect(comments.length).to.eq(0);
 				});
+			});
+		});
+	});
+
+	describe("Get all posts", () => {
+		/**
+		 * 1. return unauthorized
+		 * 2. return correct count and data
+		 */
+
+		it("should return unauthorized", () => {
+			cy.checkUnauthorized("GET", "/posts");
+		});
+
+		it("should return correct count and data", () => {
+			cy.fixture("posts").then((postData) => {
+				cy.createPosts(postData);
+
+				// get all posts
+				cy.request({
+					method: "GET",
+					url: "/posts",
+					headers: {
+						authorization: `Bearer ${Cypress.env("token")}`,
+					},
+				}).then((response) => {
+					expect(response.status).to.eq(200);
+					expect(response.body.success).to.be.true;
+					expect(response.body.data.length).to.eq(postData.length);
+
+					postData.forEach((_post, index) => {
+						expect(response.body.data[index].id).to.eq(index + 1);
+						expect(response.body.data[index].title).to.eq(_post.title);
+						expect(response.body.data[index].content).to.eq(_post.content);
+					});
+				});
+			});
+		});
+	});
+
+	describe("Get by ID", () => {
+		/**
+		 * 1. return unauthorized
+		 * 2. return correct data
+		 * 3. return not found
+		 */
+
+		it("should return unauthorized", () => {
+			cy.checkUnauthorized("GET", "/posts/999");
+		});
+
+		it("should return correct data", () => {
+			cy.fixture("posts").then((postsData) => {
+				postsData.forEach((_post, index) => {
+					cy.request({
+						method: "GET",
+						url: `/posts/${index + 1}`,
+						headers: {
+							authorization: `Bearer ${Cypress.env("token")}`,
+						},
+					}).then((response) => {
+						const { title, content } = response.body.data;
+						expect(response.status).to.be.ok;
+						expect(title).to.eq(_post.title);
+						expect(content).to.eq(_post.content);
+					});
+				});
+			});
+		});
+
+		it("should return not found", () => {
+			cy.request({
+				method: "GET",
+				url: `/posts/${randomId}`,
+				headers: {
+					authorization: `Bearer ${Cypress.env("token")}`,
+				},
+				failOnStatusCode: false,
+			}).then((response) => {
+				expect(response.status).to.eq(404);
+				expect(response.body.success).to.be.false;
+				expect(response.body.data).to.be.null;
+			});
+		});
+	});
+
+	describe("Update post", () => {
+		/**
+		 * 1. return unauthorized
+		 * 2. return not found
+		 * 3 return error validation messages
+		 * 4. return correct updated post
+		 */
+
+		it("should return unauthorized", () => {
+			cy.checkUnauthorized("PATCH", "/posts/999");
+		});
+
+		it("should return not found", () => {
+			cy.request({
+				method: "PATCH",
+				url: `/posts/${randomId}`,
+				headers: {
+					authorization: `Bearer ${Cypress.env("token")}`,
+				},
+				failOnStatusCode: false,
+			}).then((response) => {
+				expect(response.status).to.eq(404);
+				expect(response.body.success).to.be.false;
+				expect(response.body.data).to.be.null;
 			});
 		});
 	});

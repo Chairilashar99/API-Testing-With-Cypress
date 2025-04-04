@@ -97,3 +97,28 @@ Cypress.Commands.add("generatePostsData", (count) => {
 		})
 	);
 });
+
+Cypress.Commands.add("createPosts", (data = []) => {
+	cy.login();
+
+	// reset posts
+	cy.request({
+		method: "DELETE",
+		url: "/posts/reset",
+		headers: {
+			authorization: `Bearer ${Cypress.env("token")}`,
+		},
+	});
+
+	// create posts
+	data.forEach((_post) => {
+		cy.request({
+			method: "POST",
+			url: "/posts",
+			headers: {
+				authorization: `Bearer ${Cypress.env("token")}`,
+			},
+			body: _post,
+		});
+	});
+});
