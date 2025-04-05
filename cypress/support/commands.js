@@ -122,3 +122,29 @@ Cypress.Commands.add("createPosts", (data = []) => {
 		});
 	});
 });
+
+Cypress.Commands.add("generateCommentsData", (count) => {
+	const { faker } = require("@faker-js/faker");
+
+	cy.request({
+		method: "DELETE",
+		url: "/comments/reset",
+		headers: {
+			authorization: `Bearer ${Cypress.env("token")}`,
+		},
+	});
+
+	cy.generatePostsData(3);
+	cy.fixture("posts").then((posts) => cy.createPosts(posts));
+
+	cy.writeFile(
+		"cypress/fixtures/comments.json",
+		Cypress._.times(count, () => {
+			return {
+				post_id: faker.number.int({ min: 1, max: 3 }),
+
+				content: faker.lorem.words(5),
+			};
+		})
+	);
+});
