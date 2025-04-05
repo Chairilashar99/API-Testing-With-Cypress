@@ -147,7 +147,7 @@ describe("Post module", () => {
 		/**
 		 * 1. return unauthorized
 		 * 2. return not found
-		 * 3 return error validation messages
+		 * 3. return error validation messages
 		 * 4. return correct updated post
 		 */
 
@@ -167,6 +167,147 @@ describe("Post module", () => {
 				expect(response.status).to.eq(404);
 				expect(response.body.success).to.be.false;
 				expect(response.body.data).to.be.null;
+			});
+		});
+
+		it("should return error validation message", () => {
+			cy.request({
+				method: "PATCH",
+				url: `/posts/1`,
+				headers: {
+					authorization: `Bearer ${Cypress.env("token")}`,
+				},
+				failOnStatusCode: false,
+				body: {
+					title: 123,
+					content: randomId,
+				},
+			}).then((response) => {
+				cy.badRequest(response, [
+					"title must be a string",
+					"content must be a string",
+				]);
+			});
+		});
+
+		it("should return correct updated post", () => {
+			const newPost = {
+				title: "updated title",
+				content: "updated content",
+			};
+
+			cy.request({
+				method: "PATCH",
+				url: "/posts/1",
+				headers: {
+					authorization: `Bearer ${Cypress.env("token")}`,
+				},
+				body: newPost,
+			}).then((response) => {
+				const {
+					success,
+					data: { title, content },
+				} = response.body;
+				expect(response.status).to.eq(200);
+				expect(success).to.be.true;
+				expect(title).to.eq(newPost.title);
+				expect(content).to.eq(newPost.content);
+			});
+
+			// check get by id
+			cy.request({
+				method: "GET",
+				url: "/posts/1",
+				headers: {
+					authorization: `Bearer ${Cypress.env("token")}`,
+				},
+			}).then((response) => {
+				const { title, content } = response.body.data;
+				expect(title).to.eq(newPost.title);
+				expect(content).to.eq(newPost.content);
+			});
+
+			// check get all posts
+			cy.request({
+				method: "GET",
+				url: "/posts",
+				headers: {
+					authorization: `Bearer ${Cypress.env("token")}`,
+				},
+			}).then((response) => {
+				const post = response.body.data.find((_post) => _post.id === 1);
+
+				expect(post.title).to.eq(newPost.title);
+				expect(post.content).to.eq(newPost.content);
+			});
+		});
+
+		describe("Delete post", () => {
+			/**
+			 * 1. return unauthorized
+			 * 2. return not found
+			 * 3. successfully remove the post
+			 * 4. not be found the deleted post
+			 */
+
+			it("should return unauthorized", () => {
+				cy.checkUnauthorized("DELETE", "/posts/1");
+			});
+
+			it("should return not found", () => {
+				cy.request({
+					method: "DELETE",
+					url: `/posts/${randomId}`,
+					headers: {
+						authorization: `Bearer ${Cypress.env("token")}`,
+					},
+					failOnStatusCode: false,
+				}).then((response) => {
+					const { success, data } = response.body;
+					expect(response.status).to.eq(404);
+					expect(success).to.be.false;
+					expect(data).to.be.null;
+				});
+			});
+
+			it("should successfully remove the post", () => {
+				cy.request({
+					method: "DELETE",
+					url: "/posts/1",
+					headers: {
+						authorization: `Bearer ${Cypress.env("token")}`,
+					},
+				}).then((response) => {
+					const { success, message } = response.body;
+					expect(response.status).to.be.ok;
+					expect(success).to.be.ok;
+					expect(message).to.eq("Post deleted successfully");
+				});
+			});
+
+			it("should not be found the deleted post", () => {
+				cy.request({
+					method: "GET",
+					url: "/posts/1",
+					headers: {
+						authorization: `Bearer ${Cypress.env("token")}`,
+					},
+					failOnStatusCode: false,
+				}).then((response) => {
+					expect(response.status).to.eq(404);
+				});
+
+				cy.request({
+					method: "GET",
+					url: "/posts",
+					headers: {
+						authorization: `Bearer ${Cypress.env("token")}`,
+					},
+				}).then((response) => {
+					const post = response.body.data.find((_post) => _post.id === 1);
+
+					expect(post).to.be.undefined;
+				});
 			});
 		});
 	});
